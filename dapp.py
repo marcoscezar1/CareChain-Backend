@@ -29,7 +29,7 @@ def handle_advance(data):
 
         care_results = generate_results.generate_results(input)
         logger.info(f"Data={input}, Generated: {care_results}")
-        response = requests.post(rollup_server + "/notice", json={"payload": str2hex(str(data))})
+        response = requests.post(rollup_server + "/notice", json={"payload": str2hex(str(care_results))})
         logger.info(f"Received notice status {response.status_code} body {response.content}")
         return "accept"
     

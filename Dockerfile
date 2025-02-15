@@ -35,8 +35,8 @@ COPY ./generate_results.py .
 COPY ./model_Avg_BPM.py .
 COPY ./model_Calories_Burned.py .
 COPY ./model_Sleep_Hours.py .
-#COPY ./model_Water_Intake (liters).py .
-
+COPY ["./model_Water_Intake (liters).py", "."]
+COPY ./columns_metadata.json .
 
 ENV ROLLUP_HTTP_SERVER_URL="http://127.0.0.1:5004"
 

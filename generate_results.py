@@ -1,6 +1,5 @@
-'''import json
+import json
 import importlib.util
-import pandas as pd
 from enum import Enum
 
 class Status(Enum):
@@ -11,25 +10,29 @@ class Status(Enum):
 def load_columns():
     with open("columns_metadata.json", "r") as f:
         columns_data = json.load(f)
-    return columns_data["columns"]
+    return columns_data["columns"], columns_data["categorical_columns"]
 
-def preprocess_input(input_json, columns):
-    processed_data = pd.DataFrame()
-    input_df = pd.DataFrame([input_json])
 
-    input_df = pd.get_dummies(input_df)
+def preprocess_input(input_json, columns, categorical_columns):
+    processed_data = [0] * len(columns)
+    for key, value in input_json.items():
+        if key in categorical_columns:
+            onehot_prefix = f"{key}_"
+            onehot_key = onehot_prefix + str(value)
 
-    for col in columns:
-        if col not in input_df:
-            processed_data[col] = [0]
-        else:
-            processed_data[col] = input_df[col].values
-    return processed_data.values[0]
+            if onehot_key in columns:
+                index = columns.index(onehot_key)
+                processed_data[index] = 1
+        elif key in columns:
+            index = columns.index(key)
+            processed_data[index] = value
+
+    return processed_data
 
 def predict(model_path, input_json, target):
-    columns = load_columns()
+    columns, categorical_columns = load_columns()
     columns.remove(target)
-    input_data = preprocess_input(input_json, columns)
+    input_data = preprocess_input(input_json, columns, categorical_columns)
 
     spec = importlib.util.spec_from_file_location("model", model_path)
     model_module = importlib.util.module_from_spec(spec)
@@ -45,11 +48,11 @@ def evaluate_prediction(target, predicted_value, real_value, tolerance_percent=1
     upper_bound = predicted_value + error_margin
 
     if real_value < lower_bound:
-        status = Status.BELOW_EXPECTED
+        status = Status.BELOW_EXPECTED.value
     elif real_value > upper_bound:
-        status = Status.ABOVE_EXPECTED
+        status = Status.ABOVE_EXPECTED.value
     else:
-        status = Status.WITHIN_EXPECTED
+        status = Status.WITHIN_EXPECTED.value
 
     return {
         "target": target,
@@ -62,7 +65,20 @@ def evaluate_prediction(target, predicted_value, real_value, tolerance_percent=1
     }
 
 targets = ["Avg_BPM", "Sleep_Hours", "Calories_Burned", "Water_Intake (liters)"]
-'''
+
+
+
 def generate_results(new_entry_json):
-    return 4
-        
+    new_entry = json.loads(new_entry_json)
+    care_results = {}
+    for target_to_predict in targets:
+        real_value = new_entry[target_to_predict]
+
+        model_path = f"model_{target_to_predict}.py"
+        predicted_value = predict(model_path, new_entry, target_to_predict)
+
+        result = evaluate_prediction(target_to_predict, predicted_value, real_value, tolerance_percent=10)
+        care_results[target_to_predict] = result
+    return json.dumps(care_results)
+
+
